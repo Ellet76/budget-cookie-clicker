@@ -2,7 +2,6 @@
     import type { PageData, ActionData } from './$types';
     import { enhance } from '$app/forms';
 
-    export let data: PageData;
     export let form: ActionData
 </script>
 

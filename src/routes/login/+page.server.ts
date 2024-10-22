@@ -27,15 +27,12 @@ export const actions: Actions = {
                 return fail(401, {login_fail: "Wrong Password!"})
             }
         } else {
-            user = await prisma.user.create({data: {username: username, password: password}})
+            let clicker_id = (await prisma.clicker.create({data: {name: username+"'s bakery"}})).id
+            user = await prisma.user.create({data: {username: username, password: password, clickerId: clicker_id}})
             cookies.set("id", user.id, { secure: false, path: "/"})
             throw redirect(307, "/")
         }
 
         
     },
-    logout: async ({ request, cookies, params }) => {
-        cookies.delete("id", { path: "/" })
-        throw redirect(307, "/")
-    }
 }

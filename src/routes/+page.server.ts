@@ -1,6 +1,8 @@
-import { redirect } from '@sveltejs/kit';
+import { redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { prisma } from '$lib'
+import { updated } from '$app/stores';
+import { Path } from '$env/static/private';
 
 export const load = (async ({cookies}) => {
     let id = cookies.get("id")
@@ -9,12 +11,43 @@ export const load = (async ({cookies}) => {
         throw redirect(307, "/login")
     }
 
-    let user = await prisma.user.findUnique({where: { id: id } })
+    let user = await prisma.user.findUnique({where: { id: id }, include: {clicker:true}})
 
     if (!user) {
         cookies.delete("id", { path: "/" })
         throw redirect(307, "/login")
     }
 
-    return { user };
+    let clicker = user.clicker
+
+    let clicks = user.clicker?.clicks!
+
+    return { user, clicker, clicks};
 }) satisfies PageServerLoad;
+
+export const actions : Actions = {
+    logout: async ({request, cookies}) => {
+        cookies.delete("id", { path: "/" })
+        throw redirect(307, "/login")
+    },
+    change_clicker: async ({request, cookies}) => {
+        let data = await request.formData()
+        let clicker_id = data.get("id")?.toString()
+        
+        let user_id = cookies.get("id")
+
+        await prisma.user.update({where: {id: user_id}, data: {clickerId: clicker_id}})
+
+    },
+    click: async ({request, cookies}) => {
+        let data = await request.formData()
+        let id = data.get("id")?.toString()!
+        let clicker = await prisma.clicker.findUnique({where: {id:id}})
+        
+        let clicks = clicker?.clicks!
+        clicks++
+
+        await prisma.clicker.update({where: {id:id}, data: {clicks:clicks}})
+        console.log(clicks)
+    }
+}
