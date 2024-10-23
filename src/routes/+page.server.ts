@@ -1,8 +1,8 @@
 import { redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { prisma } from '$lib'
-import { updated } from '$app/stores';
-import { Path } from '$env/static/private';
+import { _controllers } from './api/data/+server';
+
 
 export const load = (async ({cookies}) => {
     let id = cookies.get("id")
@@ -35,8 +35,9 @@ export const actions : Actions = {
         let clicker_id = data.get("id")?.toString()
         
         let user_id = cookies.get("id")
-
-        await prisma.user.update({where: {id: user_id}, data: {clickerId: clicker_id}})
+        if (clicker_id){
+            await prisma.user.update({where: {id: user_id}, data: {clickerId: clicker_id}})
+        }
 
     },
     click: async ({request, cookies}) => {
@@ -49,5 +50,16 @@ export const actions : Actions = {
 
         await prisma.clicker.update({where: {id:id}, data: {clicks:clicks}})
         console.log(clicks)
+
+
+        const encoder = new TextEncoder();
+        const encoded = encoder.encode("data: " + JSON.stringify(clicks) + "\n\n");
+
+        for (let controller of _controllers) {
+            try {
+                controller.enqueue(encoded)
+            } catch (e) {
+            }
+        }
     }
 }
